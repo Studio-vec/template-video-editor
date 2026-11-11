@@ -127,6 +127,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
+    if (p === '/api/health') return send(res, 200, { ok: true });
     if (req.method === 'POST' && p === '/api/upload') return handleUpload(req, res, url);
     if (req.method === 'POST' && p === '/api/render') return handleRender(req, res);
     if (req.method === 'GET' && p.startsWith('/api/job/')) {

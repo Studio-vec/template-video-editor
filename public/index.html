@@ -80,7 +80,7 @@
 <header>
   <span class="tag">1 / 10</span>
   <h1>템플릿 영상 편집기</h1>
-  <span class="hint" style="margin:0">원본 영상을 넣으면 템플릿 그대로 일괄 편집합니다</span>
+  <span class="hint" style="margin:0" id="modeHint">원본 영상을 넣으면 템플릿 그대로 일괄 편집합니다</span>
   <span class="sp"></span>
   <button id="showPanel">⚙ 템플릿 설정</button>
   <button id="openOut">📁 결과물 폴더</button>
@@ -137,6 +137,7 @@
     <div class="actions">
       <button class="primary" id="renderAll" disabled>전체 편집 시작</button>
       <button id="renderSel" disabled>선택만</button>
+      <button id="dlAll" style="display:none">⬇ 전체 저장</button>
       <button id="clearDone">완료 항목 지우기</button>
     </div>
   </section>
@@ -144,6 +145,8 @@
 <input type="file" id="importInput" accept=".json,application/json" hidden>
 <div id="toast"></div>
 
+<script src="vendor/ffmpeg/ffmpeg.js"></script>
+<script src="vendor/ffmpeg/util.js"></script>
 <script>
 // ───────────────────────── 템플릿 정의 ─────────────────────────
 // 기본값은 "v1.mp4 → 1.mp4" 편집본을 픽셀 단위로 측정한 값
@@ -452,6 +455,7 @@ async function addFiles(fileList) {
   }
 }
 async function upload(it) {
+  if (await MODE === 'wasm') return readLocalMeta(it);
   try {
     const r = await fetch('/api/upload?name=' + encodeURIComponent(it.name), { method: 'POST', body: it.file });
     const j = await r.json(); if (!r.ok) throw new Error(j.error);
@@ -485,8 +489,8 @@ function statusHtml(it) {
     case 'ready': return '<span class="st">대기</span>';
     case 'rendering': return `<span class="st">${Math.round(it.progress * 100)}%</span><div class="bar"><i style="width:${it.progress * 100}%"></i></div>`;
     case 'done': return `<span class="st done">완료</span><div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end">
-        <a class="btn small" style="padding:2px 6px;font-size:11px" href="/api/out/${encodeURIComponent(it.out)}" target="_blank" onclick="event.stopPropagation()">보기</a>
-        <a class="btn small" style="padding:2px 6px;font-size:11px" href="/api/out/${encodeURIComponent(it.out)}?dl=1" onclick="event.stopPropagation()">저장</a></div>`;
+        <a class="btn small" style="padding:2px 6px;font-size:11px" href="${viewUrl(it)}" target="_blank" onclick="event.stopPropagation()">보기</a>
+        <a class="btn small" style="padding:2px 6px;font-size:11px" href="${dlUrl(it)}" download="${escapeHtml(it.out)}" onclick="event.stopPropagation()">저장</a></div>`;
     case 'error': return `<span class="st err" title="${escapeHtml(it.error || '')}">실패 ⓘ</span>`;
   }
   return '';
@@ -533,7 +537,16 @@ function updateButtons() {
   const anyReady = items.some(i => i.id && i.status !== 'rendering');
   document.getElementById('renderAll').disabled = !anyReady || rendering;
   document.getElementById('renderSel').disabled = !(selected && selected.id) || rendering;
+  document.getElementById('dlAll').style.display = items.some(i => i.status === 'done') ? '' : 'none';
 }
+const viewUrl = it => it.outUrl || `/api/out/${encodeURIComponent(it.out)}`;
+const dlUrl = it => it.outUrl || `/api/out/${encodeURIComponent(it.out)}?dl=1`;
+document.getElementById('dlAll').onclick = async () => {
+  for (const it of items.filter(i => i.status === 'done')) {
+    const a = document.createElement('a'); a.href = dlUrl(it); a.download = it.out; document.body.appendChild(a); a.click(); a.remove();
+    await new Promise(r => setTimeout(r, 400));
+  }
+};
 
 // ───────────────────────── 렌더링 ─────────────────────────
 let rendering = false;
@@ -554,6 +567,11 @@ async function runQueue(queue) {
     it.status = 'rendering'; it.progress = 0; renderItemMeta(it);
     try {
       const outName = String(T.outPattern || '{name}_edit').replaceAll('{name}', baseName(it.name)).replaceAll('{n}', it.n);
+      if (await MODE === 'wasm') {
+        if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+        it.outUrl = await renderWasm(it); it.out = outName.replace(/\.mp4$/i, '') + '.mp4';
+        it.status = 'done'; ok++; renderItemMeta(it); continue;
+      }
       const r = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: it.id, template: T, overlay: overlayDataURL(it), place: placement(it.meta.width, it.meta.height, it), outName }),
@@ -570,7 +588,83 @@ async function runQueue(queue) {
     renderItemMeta(it);
   }
   rendering = false; updateButtons();
-  toast(`${ok}/${queue.length}개 완료 · output 폴더에 저장됨`);
+  toast(await MODE === 'wasm' ? `${ok}/${queue.length}개 완료 · '저장' 또는 '전체 저장'으로 내려받으세요` : `${ok}/${queue.length}개 완료 · output 폴더에 저장됨`);
+}
+
+// ───────────────────────── 브라우저 엔진 (ffmpeg.wasm) ─────────────────────────
+// 로컬 서버(node server.js)가 있으면 서버에서, 없으면(GitHub Pages 등) 브라우저 안에서 인코딩.
+// 영상은 어디에도 업로드되지 않음. ?engine=wasm 으로 강제 가능.
+const MODE = (async () => {
+  if (new URLSearchParams(location.search).get('engine') === 'wasm') return 'wasm';
+  try { const r = await fetch('api/health', { cache: 'no-store' }); if (r.ok && (await r.json()).ok) return 'server'; } catch {}
+  return 'wasm';
+})();
+MODE.then(m => {
+  document.body.dataset.mode = m;
+  if (m === 'wasm') {
+    document.getElementById('openOut').style.display = 'none';
+    document.getElementById('modeHint').textContent = '브라우저에서 바로 변환 · 영상은 어디에도 업로드되지 않아요';
+  }
+});
+function readLocalMeta(it) {
+  return new Promise(resolve => {
+    const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.src = URL.createObjectURL(it.file);
+    v.onloadedmetadata = () => {
+      it.meta = { width: v.videoWidth, height: v.videoHeight, duration: v.duration || 0 };
+      it.id = 'local'; it.status = 'ready'; URL.revokeObjectURL(v.src); renderItemMeta(it); updateButtons(); resolve();
+    };
+    v.onerror = () => { it.status = 'error'; it.error = '이 브라우저에서 열 수 없는 영상 형식입니다 (mp4 권장)'; renderItemMeta(it); resolve(); };
+  });
+}
+const CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+let ffPromise = null;
+function loadFF() {
+  if (!ffPromise) ffPromise = (async () => {
+    toast('처음 한 번 변환 엔진(약 30MB)을 내려받는 중…');
+    const ff = new FFmpegWASM.FFmpeg();
+    await ff.load({
+      coreURL: await FFmpegUtil.toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await FFmpegUtil.toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    return ff;
+  })().catch(e => { ffPromise = null; throw new Error('변환 엔진을 불러오지 못했어요: ' + e.message); });
+  return ffPromise;
+}
+const even = n => Math.max(2, Math.round(n / 2) * 2), floorEven = n => Math.max(0, Math.floor(n / 2) * 2);
+async function renderWasm(it) {
+  const ff = await loadFF();
+  const W = even(T.width), H = even(T.height), m = it.meta;
+  const pl = placement(m.width, m.height, it);
+  const sw = even(pl.w), sh = even(pl.h);
+  const x = Math.round(pl.x + (pl.w - sw) / 2), y = Math.round(pl.y + (pl.h - sh) / 2);
+  // 캔버스와 겹치는 부분만 잘라서(crop) 제자리에 붙임(pad)
+  const cx = floorEven(-x), cy = floorEven(-y), vx = floorEven(x), vy = floorEven(y);
+  const cw = floorEven(Math.min(sw - cx, W - vx)), ch = floorEven(Math.min(sh - cy, H - vy));
+  if (cw < 2 || ch < 2) throw new Error('영상이 화면 밖에 있어요. 위치를 초기화해 주세요.');
+  const bg = /^#[0-9a-f]{6}$/i.test(T.bgColor) ? '0x' + T.bgColor.slice(1) : 'black';
+  const fps = T.fps === 'source' ? '' : `fps=${Number(T.fps) || 30},`;
+  const filter = `[0:v]${fps}scale=${sw}:${sh}:flags=bicubic,crop=${cw}:${ch}:${cx}:${cy},pad=${W}:${H}:${vx}:${vy}:color=${bg},setsar=1[b];`
+    + `[b][1:v]overlay=0:0:shortest=1,format=yuv420p[out]`;
+  const ext = (it.name.match(/\.[^.]+$/) || ['.mp4'])[0].toLowerCase();
+  const inName = 'in' + ext;
+  await ff.writeFile(inName, new Uint8Array(await it.file.arrayBuffer()));
+  await ff.writeFile('ov.png', await FFmpegUtil.fetchFile(overlayDataURL(it)));
+  const logs = [];
+  const onLog = ({ message }) => { logs.push(message); if (logs.length > 40) logs.shift(); };
+  const onProg = ({ time }) => { if (m.duration) { it.progress = Math.min(0.99, Math.max(0, time / 1e6 / m.duration)); renderItemMeta(it); } };
+  ff.on('log', onLog); ff.on('progress', onProg);
+  try {
+    const code = await ff.exec(['-i', inName, '-loop', '1', '-i', 'ov.png', '-filter_complex', filter,
+      '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', T.preset === 'slow' ? 'medium' : 'veryfast',
+      '-crf', String(T.crf ?? 18), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k',
+      '-movflags', '+faststart', ...(m.duration ? ['-t', String(m.duration)] : []), 'out.mp4']);
+    if (code !== 0) throw new Error(logs.slice(-3).join('\n') || '변환 실패');
+    const data = await ff.readFile('out.mp4');
+    return URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+  } finally {
+    ff.off('log', onLog); ff.off('progress', onProg);
+    for (const f of [inName, 'ov.png', 'out.mp4']) { try { await ff.deleteFile(f); } catch {} }
+  }
 }
 
 // ───────────────────────── 유틸 ─────────────────────────

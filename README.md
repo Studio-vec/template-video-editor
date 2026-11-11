@@ -6,7 +6,12 @@
 - 상단 118px 크림색(#FCFECE) 바 + 검정 박스 흰 글씨 `1 / 10` 번호 라벨
 - 영상은 캔버스 높이에 맞게 확대해 바 아래 영역 중앙에 배치 (좌우·하단이 잘려 워터마크도 빠짐)
 
-## 실행
+## 바로 쓰기 (설치 없음)
+👉 **https://studio-vec.github.io/template-video-editor/**
+
+브라우저 안에서 변환합니다(ffmpeg.wasm). 영상은 어디에도 업로드되지 않아요. 처음 한 번 변환 엔진(약 30MB)을 내려받고, 10초 영상 기준 약 40~60초 걸립니다. PC 크롬/엣지 권장.
+
+## 더 빠르게: 내 PC에서 실행
 필요: [Node.js](https://nodejs.org) 18 이상 (Windows / macOS / Linux)
 
 ```bash
