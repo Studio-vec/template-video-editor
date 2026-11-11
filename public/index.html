@@ -478,6 +478,8 @@ function select(it) {
   selected = it;
   if (video.src) URL.revokeObjectURL(video.src);
   video.src = URL.createObjectURL(it.file);
+  // 일부 브라우저는 로드 직후 첫 프레임을 그리지 않음 → 살짝 이동시켜 미리보기에 프레임 표시
+  video.addEventListener('loadeddata', () => { if (video.paused && video.currentTime === 0) video.currentTime = 0.04; }, { once: true });
   video.load();
   list.querySelectorAll('li').forEach(li => li.classList.toggle('sel', li.dataset.key === it.key));
   draw();
