@@ -21,7 +21,7 @@
   button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
   button.primary:disabled { opacity: .45; cursor: default; }
   button.small { padding: 3px 8px; font-size: 12px; border-radius: 6px; }
-  main { display: grid; grid-template-columns: 300px minmax(320px, 1fr) 380px; gap: 16px; padding: 16px 20px; align-items: start; }
+  main { display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: 16px; padding: 16px 20px; align-items: start; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .card h2 { font-size: 13px; margin: 0 0 10px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
   .card h2 .sp { flex: 1; }
@@ -39,10 +39,30 @@
   .more[open] > div { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
   .more[open] > div button { border: 0; text-align: left; border-radius: 6px; }
   .more[open] > div button:hover { background: var(--bg); }
-  body.noPanel main { grid-template-columns: minmax(320px, 1fr) 380px; }
-  body.noPanel #tplPanel { display: none; }
-  #showPanel { display: none; }
-  body.noPanel #showPanel { display: inline-block; }
+  /* ── 3단계 큰 버튼 영역 ── */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px 20px 0; }
+  .step { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-height: 190px; transition: border-color .2s, box-shadow .2s; }
+  .step.active { border-color: var(--accent); box-shadow: 0 6px 22px rgba(0,0,0,.08); }
+  .step-head { display: flex; align-items: center; gap: 10px; }
+  .step-head .num { width: 32px; height: 32px; border-radius: 50%; background: #d9d9d2; color: #fff; font-weight: 800; font-size: 16px; display: grid; place-items: center; flex: none; }
+  .step.active .num { background: var(--accent); color: var(--accent-fg); }
+  .step.done .num { background: var(--ok); color: #fff; }
+  .step.done .num::after { content: '✓'; } .step.done .num span { display: none; }
+  .step-head h3 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.3px; }
+  .step-head .sub { margin-left: auto; font-size: 13px; color: var(--sub); }
+  .big { font: inherit; font-size: 20px; font-weight: 800; padding: 0 16px; border-radius: 14px; width: 100%; flex: 1; min-height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .big small { font-size: 13px; font-weight: 500; opacity: .75; }
+  button.big { background: var(--accent); color: var(--accent-fg); border: 0; }
+  button.big:disabled { background: #e7e7e1; color: #a5a59c; cursor: default; }
+  button.big.go { background: var(--ok); color: #fff; }
+  .big-bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .big-bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+  .step-links { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  #tplPanel { margin: 0 20px 40px; scroll-margin-top: 70px; }
+  #form { columns: 2 340px; column-gap: 28px; }
+  #form > * { break-inside: avoid; }
+  #form .quick { column-span: all; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); column-gap: 28px; padding-bottom: 6px; }
+  #form .quick .hint { grid-column: 1 / -1; text-align: right; margin: -2px 0 4px !important; }
   .controls .sep { width: 1px; height: 20px; background: var(--line); }
   .row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
   .row label { font-size: 12px; color: var(--sub); }
@@ -55,9 +75,10 @@
   #stage:active { cursor: grabbing; }
   .controls { display: flex; gap: 8px; align-items: center; }
   .controls input[type=range] { flex: 1; }
-  #drop { border: 2px dashed #cfcfc6; border-radius: 12px; padding: 18px; text-align: center; color: var(--sub); cursor: pointer; transition: .15s; }
-  #drop.over { border-color: var(--accent); background: var(--sel); color: var(--text); }
-  #list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 330px); overflow: auto; }
+  #drop { border: 2.5px dashed #c4c4ba; background: #fafaf6; color: var(--text); cursor: pointer; transition: .15s; text-align: center; }
+  #drop:hover, #drop.over { border-color: var(--accent); background: var(--sel); }
+  #drop .ico { font-size: 30px; line-height: 1; }
+  #list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 220px); overflow: auto; }
   #list li { display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
   #list li.sel { background: var(--sel); border-color: #e2d97a; }
   #list .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; background: #222; }
@@ -73,7 +94,11 @@
   .empty { color: var(--sub); text-align: center; padding: 30px 0; font-size: 13px; }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-fg); padding: 10px 16px; border-radius: 10px; font-weight: 600; opacity: 0; pointer-events: none; transition: .2s; }
   #toast.show { opacity: 1; }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } #stageWrap { position: static; } #list { max-height: none; } }
+  @media (max-width: 900px) {
+    .steps { grid-template-columns: 1fr; padding: 12px 16px 0; } .step { min-height: 0; } .big { min-height: 72px; }
+    main { grid-template-columns: 1fr; padding: 12px 16px; } #stageWrap { position: static; } #list { max-height: none; }
+    #tplPanel { margin: 0 16px 30px; } header { padding: 10px 16px; } header .hint { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -83,29 +108,28 @@
   <span class="hint" style="margin:0" id="modeHint">원본 영상을 넣으면 템플릿 그대로 일괄 편집합니다</span>
   <span class="sp"></span>
   <button id="showPanel">⚙ 템플릿 설정</button>
-  <button id="openOut">📁 결과물 폴더</button>
 </header>
 
-<main>
-  <!-- 템플릿 설정 -->
-  <section class="card" id="tplPanel">
-    <h2>템플릿 설정 <span class="sp"></span>
-      <button class="small" id="hidePanel" title="설정 패널 닫기">닫기 ✕</button>
-    </h2>
-    <div style="display:flex;gap:6px;align-items:center">
-      <select id="tplSelect" style="flex:1"></select>
-      <button class="small" id="tplSave">저장</button>
-      <details class="more"><summary title="템플릿 관리">⋯</summary><div>
-        <button class="small" id="tplSaveAs">다른 이름으로 저장</button>
-        <button class="small" id="tplExport">파일로 내보내기</button>
-        <button class="small" id="tplImport">파일에서 가져오기</button>
-        <button class="small" id="tplReset">기본값으로 되돌리기</button>
-        <button class="small" id="tplDelete" style="color:var(--err)">삭제</button>
-      </div></details>
-    </div>
-    <div id="form"></div>
-  </section>
+<!-- ① 넣기 → ② 편집 → ③ 저장 -->
+<section class="steps">
+  <div class="step active" id="step1">
+    <div class="step-head"><span class="num"><span>1</span></span><h3>영상 넣기</h3><span class="sub" id="count"></span></div>
+    <div id="drop" class="big"><span class="ico">＋</span>여기로 끌어놓거나 클릭<small>여러 개 한 번에 · mp4 / mov / webm</small></div>
+    <input type="file" id="fileInput" accept="video/*" multiple hidden>
+  </div>
+  <div class="step" id="step2">
+    <div class="step-head"><span class="num"><span>2</span></span><h3>편집하기</h3><span class="sub" id="step2sub"></span></div>
+    <button class="big" id="renderAll" disabled>편집 시작<small id="renderAllSub">먼저 영상을 넣어 주세요</small></button>
+    <div class="big-bar"><i id="overallBar"></i></div>
+  </div>
+  <div class="step" id="step3">
+    <div class="step-head"><span class="num"><span>3</span></span><h3>저장하기</h3><span class="sub" id="step3sub"></span></div>
+    <button class="big" id="dlAll" disabled>⬇ 전체 저장<small id="dlAllSub">편집이 끝나면 눌러 주세요</small></button>
+    <div class="step-links"><button class="small" id="openOut">📁 결과물 폴더 열기</button></div>
+  </div>
+</section>
 
+<main>
   <!-- 미리보기 -->
   <section id="stageWrap">
     <canvas id="stage" width="1080" height="1350"></canvas>
@@ -122,10 +146,8 @@
 
   <!-- 작업 목록 -->
   <section class="card">
-    <h2>영상 목록 <span class="sp"></span><span class="hint" id="count" style="margin:0"></span></h2>
-    <div id="drop">영상 파일을 여기로 끌어놓거나 <b>클릭</b>해서 선택<br><span style="font-size:12px">여러 개 한 번에 가능 · mp4 / mov / webm</span></div>
-    <input type="file" id="fileInput" accept="video/*" multiple hidden>
-    <div class="row two" style="margin-top:10px">
+    <h2>영상 목록 <span class="sp"></span><span class="hint" style="margin:0">클릭하면 왼쪽에 미리보기</span></h2>
+    <div class="row two">
       <label>번호 매기기</label>
       <select id="numMode">
         <option value="file">파일명 숫자 (v3 → 3)</option>
@@ -135,13 +157,28 @@
     </div>
     <ul id="list"><li class="empty" style="display:block;border:0;cursor:default">아직 추가된 영상이 없습니다</li></ul>
     <div class="actions">
-      <button class="primary" id="renderAll" disabled>전체 편집 시작</button>
-      <button id="renderSel" disabled>선택만</button>
-      <button id="dlAll" style="display:none">⬇ 전체 저장</button>
-      <button id="clearDone">완료 항목 지우기</button>
+      <button class="small" id="renderSel" disabled>선택한 영상만 편집</button>
+      <button class="small" id="clearDone">완료 항목 지우기</button>
     </div>
   </section>
 </main>
+
+<!-- 템플릿 설정 (맨 아래) -->
+<section class="card" id="tplPanel">
+  <h2 style="font-size:15px">⚙ 템플릿 설정 <span class="hint" style="margin:0;font-weight:400">평소엔 건드릴 필요 없어요</span></h2>
+  <div style="display:flex;gap:6px;align-items:center;max-width:520px">
+    <select id="tplSelect" style="flex:1"></select>
+    <button class="small" id="tplSave">저장</button>
+    <details class="more"><summary title="템플릿 관리">⋯</summary><div>
+      <button class="small" id="tplSaveAs">다른 이름으로 저장</button>
+      <button class="small" id="tplExport">파일로 내보내기</button>
+      <button class="small" id="tplImport">파일에서 가져오기</button>
+      <button class="small" id="tplReset">기본값으로 되돌리기</button>
+      <button class="small" id="tplDelete" style="color:var(--err)">삭제</button>
+    </div></details>
+  </div>
+  <div id="form"></div>
+</section>
 <input type="file" id="importInput" accept=".json,application/json" hidden>
 <div id="toast"></div>
 
@@ -261,12 +298,9 @@ function updateSummaries() {
 }
 function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-// 설정 패널 전체 닫기/열기
-const LS_OPEN = 'tplEditor.openGroups', LS_PANEL = 'tplEditor.panelHidden';
-function setPanel(hidden) { document.body.classList.toggle('noPanel', hidden); lsSet(LS_PANEL, hidden); }
-document.getElementById('hidePanel').onclick = () => setPanel(true);
-document.getElementById('showPanel').onclick = () => setPanel(false);
-setPanel(lsGet(LS_PANEL, false));
+const LS_OPEN = 'tplEditor.openGroups';
+// 상단 '⚙ 템플릿 설정' → 맨 아래 설정으로 이동
+document.getElementById('showPanel').onclick = () => document.getElementById('tplPanel').scrollIntoView({ behavior: 'smooth' });
 // ⋯ 메뉴: 항목 클릭 또는 바깥 클릭 시 닫힘
 const moreMenu = document.querySelector('.more');
 moreMenu.querySelector('div').addEventListener('click', () => moreMenu.open = false);
@@ -534,16 +568,52 @@ function renderItemMeta(it) {
     renumber(); refreshList(); draw();
   };
   li.querySelector('.stw').innerHTML = statusHtml(it);
+  updateSteps();
 }
 function updateButtons() {
   const anyReady = items.some(i => i.id && i.status !== 'rendering');
   document.getElementById('renderAll').disabled = !anyReady || rendering;
   document.getElementById('renderSel').disabled = !(selected && selected.id) || rendering;
-  document.getElementById('dlAll').style.display = items.some(i => i.status === 'done') ? '' : 'none';
+  updateSteps();
 }
+// 3단계 카드 상태: 지금 해야 할 단계를 강조하고 큰 버튼 문구를 바꿈
+let runInfo = null; // { i, total }
+function updateSteps() {
+  const $ = id => document.getElementById(id);
+  const n = items.length, loading = items.filter(i => i.status === 'uploading').length;
+  const done = items.filter(i => i.status === 'done').length, err = items.filter(i => i.status === 'error').length;
+  const todo = items.filter(i => i.id && !['done', 'rendering'].includes(i.status)).length;
+  $('count').textContent = n ? `${n}개 들어옴` : '';
+  // ② 편집
+  const btn = $('renderAll'), sub = $('renderAllSub');
+  btn.firstChild.textContent = rendering ? '편집 중… 기다려 주세요' : done && !todo ? '다시 편집' : '편집 시작';
+  btn.classList.toggle('go', !rendering && todo > 0);
+  if (rendering && runInfo) {
+    const cur = runInfo.queue[runInfo.i], p = cur ? cur.progress : 0;
+    const overall = (runInfo.i + p) / runInfo.queue.length;
+    sub.textContent = `${runInfo.i + 1} / ${runInfo.queue.length}번째 영상 · 전체 ${Math.round(overall * 100)}%`;
+    $('overallBar').style.width = overall * 100 + '%';
+  } else {
+    sub.textContent = !n ? '먼저 영상을 넣어 주세요' : loading ? '영상 불러오는 중…' : todo ? `${todo}개 편집 대기` : `${done}개 편집 완료`;
+    $('overallBar').style.width = n && !todo && done ? '100%' : '0%';
+  }
+  $('step2sub').textContent = err ? `실패 ${err}개` : '';
+  // ③ 저장
+  $('dlAll').disabled = !done || rendering;
+  $('dlAllSub').textContent = done ? `${done}개 파일 내려받기` : '편집이 끝나면 눌러 주세요';
+  // 현재 단계 강조
+  const stage = !n ? 1 : (todo || rendering || loading) ? 2 : 3;
+  [1, 2, 3].forEach(k => {
+    const el = $('step' + k);
+    el.classList.toggle('active', k === stage);
+    el.classList.toggle('done', k < stage || (k === 3 && savedOnce && stage === 3));
+  });
+}
+let savedOnce = false;
 const viewUrl = it => it.outUrl || `/api/out/${encodeURIComponent(it.out)}`;
 const dlUrl = it => it.outUrl || `/api/out/${encodeURIComponent(it.out)}?dl=1`;
 document.getElementById('dlAll').onclick = async () => {
+  savedOnce = true; updateSteps();
   for (const it of items.filter(i => i.status === 'done')) {
     const a = document.createElement('a'); a.href = dlUrl(it); a.download = it.out; document.body.appendChild(a); a.click(); a.remove();
     await new Promise(r => setTimeout(r, 400));
@@ -552,7 +622,11 @@ document.getElementById('dlAll').onclick = async () => {
 
 // ───────────────────────── 렌더링 ─────────────────────────
 let rendering = false;
-document.getElementById('renderAll').onclick = () => runQueue(items.filter(i => i.id && i.status !== 'uploading'));
+document.getElementById('renderAll').onclick = () => {
+  const ready = items.filter(i => i.id && i.status !== 'uploading');
+  const todo = ready.filter(i => i.status !== 'done');
+  runQueue(todo.length ? todo : ready); // 남은 것만, 다 끝났으면 전체 다시
+};
 document.getElementById('renderSel').onclick = () => selected && runQueue([selected]);
 document.getElementById('clearDone').onclick = () => {
   for (let i = items.length - 1; i >= 0; i--) if (items[i].status === 'done') { if (selected === items[i]) selected = null; items.splice(i, 1); }
@@ -562,10 +636,11 @@ document.getElementById('openOut').onclick = () => fetch('/api/open-output', { m
 
 async function runQueue(queue) {
   if (!queue.length) return;
-  rendering = true; updateButtons();
+  rendering = true; savedOnce = false; runInfo = { queue, i: 0 }; updateButtons();
   try { await document.fonts.load(`${T.fontWeight} ${T.fontSize}px "${T.fontFamily}"`); } catch {}
   let ok = 0;
-  for (const it of queue) {
+  for (const [qi, it] of queue.entries()) {
+    runInfo.i = qi;
     it.status = 'rendering'; it.progress = 0; renderItemMeta(it);
     try {
       const outName = String(T.outPattern || '{name}_edit').replaceAll('{name}', baseName(it.name)).replaceAll('{n}', it.n);
@@ -589,7 +664,7 @@ async function runQueue(queue) {
     } catch (e) { it.status = 'error'; it.error = e.message; console.error(e); }
     renderItemMeta(it);
   }
-  rendering = false; updateButtons();
+  rendering = false; runInfo = null; updateButtons();
   toast(await MODE === 'wasm' ? `${ok}/${queue.length}개 완료 · '저장' 또는 '전체 저장'으로 내려받으세요` : `${ok}/${queue.length}개 완료 · output 폴더에 저장됨`);
 }
 
@@ -676,6 +751,7 @@ addEventListener('beforeunload', e => { if (rendering) { e.preventDefault(); e.r
 
 buildForm(); fillTplSelect();
 document.fonts.ready.then(draw);
+updateSteps();
 document.fonts.load('700 36px Pretendard').then(draw).catch(() => {});
 draw();
 </script>
