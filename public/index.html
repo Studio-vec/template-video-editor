@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>템플릿 영상 편집기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #f4f4f1; --panel: #ffffff; --line: #e3e3dd; --text: #1d1d1b; --sub: #77776f;
+    --accent: #1d1d1b; --accent-fg: #fcfece; --ok: #1f8a4c; --err: #c4352b; --sel: #fff9c9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Pretendard, "Malgun Gothic", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 800; letter-spacing: -0.2px; }
+  header .tag { background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 12px; padding: 2px 8px; }
+  header .sp { flex: 1; }
+  button, .btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 7px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  button:hover { border-color: #bdbdb4; }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+  button.primary:disabled { opacity: .45; cursor: default; }
+  button.small { padding: 3px 8px; font-size: 12px; border-radius: 6px; }
+  main { display: grid; grid-template-columns: 300px minmax(320px, 1fr) 380px; gap: 16px; padding: 16px 20px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .card h2 { font-size: 13px; margin: 0 0 10px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .card h2 .sp { flex: 1; }
+  fieldset { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; }
+  legend { font-size: 12px; font-weight: 700; color: var(--sub); padding: 0 4px 0 0; }
+  .row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
+  .row label { font-size: 12px; color: var(--sub); }
+  .row.two { grid-template-columns: 96px 1fr 1fr; }
+  input[type=number], input[type=text], select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--text); min-width: 0; }
+  input[type=color] { width: 100%; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: #fff; }
+  .hint { font-size: 12px; color: var(--sub); margin: 6px 0 0; }
+  #stageWrap { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px; }
+  #stage { width: 100%; max-height: calc(100vh - 190px); object-fit: contain; background: #222; border-radius: 10px; cursor: grab; touch-action: none; display: block; }
+  #stage:active { cursor: grabbing; }
+  .controls { display: flex; gap: 8px; align-items: center; }
+  .controls input[type=range] { flex: 1; }
+  #drop { border: 2px dashed #cfcfc6; border-radius: 12px; padding: 18px; text-align: center; color: var(--sub); cursor: pointer; transition: .15s; }
+  #drop.over { border-color: var(--accent); background: var(--sel); color: var(--text); }
+  #list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 330px); overflow: auto; }
+  #list li { display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  #list li.sel { background: var(--sel); border-color: #e2d97a; }
+  #list .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; background: #222; }
+  #list .name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #list .meta { font-size: 11px; color: var(--sub); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  #list .meta input { width: 46px; padding: 1px 4px; font-size: 12px; }
+  #list .st { font-size: 12px; text-align: right; min-width: 64px; }
+  .st.done { color: var(--ok); font-weight: 700; } .st.err { color: var(--err); font-weight: 700; }
+  .bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .actions .primary { flex: 1; }
+  .empty { color: var(--sub); text-align: center; padding: 30px 0; font-size: 13px; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-fg); padding: 10px 16px; border-radius: 10px; font-weight: 600; opacity: 0; pointer-events: none; transition: .2s; }
+  #toast.show { opacity: 1; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } #stageWrap { position: static; } #list { max-height: none; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="tag">1 / 10</span>
+  <h1>템플릿 영상 편집기</h1>
+  <span class="hint" style="margin:0">원본 영상을 넣으면 템플릿 그대로 일괄 편집합니다</span>
+  <span class="sp"></span>
+  <button id="openOut">📁 결과물 폴더</button>
+</header>
+
+<main>
+  <!-- 템플릿 설정 -->
+  <section class="card" id="tplPanel">
+    <h2>템플릿 <span class="sp"></span>
+      <select id="tplSelect" style="width:auto"></select>
+    </h2>
+    <div class="actions" style="margin-top:0">
+      <button class="small" id="tplSave">저장</button>
+      <button class="small" id="tplSaveAs">다른 이름으로</button>
+      <button class="small" id="tplDelete">삭제</button>
+      <button class="small" id="tplExport">내보내기</button>
+      <button class="small" id="tplImport">가져오기</button>
+      <button class="small" id="tplReset">기본값</button>
+    </div>
+    <div id="form"></div>
+  </section>
+
+  <!-- 미리보기 -->
+  <section id="stageWrap">
+    <canvas id="stage" width="1080" height="1350"></canvas>
+    <div class="card controls" style="padding:10px">
+      <button class="small" id="play">▶</button>
+      <input type="range" id="seek" min="0" max="1000" value="0">
+      <span id="time" class="hint" style="margin:0;min-width:84px;text-align:right">0.0 / 0.0</span>
+    </div>
+    <div class="card controls" style="padding:10px">
+      <span class="hint" style="margin:0;flex:1">미리보기를 <b>드래그</b>하면 위치, <b>휠</b>은 확대(이 영상만 적용)</span>
+      <button class="small" id="resetItem">위치 초기화</button>
+      <button class="small" id="applyAll">이 위치를 전체에 적용</button>
+    </div>
+  </section>
+
+  <!-- 작업 목록 -->
+  <section class="card">
+    <h2>영상 목록 <span class="sp"></span><span class="hint" id="count" style="margin:0"></span></h2>
+    <div id="drop">영상 파일을 여기로 끌어놓거나 <b>클릭</b>해서 선택<br><span style="font-size:12px">여러 개 한 번에 가능 · mp4 / mov / webm</span></div>
+    <input type="file" id="fileInput" accept="video/*" multiple hidden>
+    <div class="row two" style="margin-top:10px">
+      <label>번호 매기기</label>
+      <select id="numMode">
+        <option value="file">파일명 숫자 (v3 → 3)</option>
+        <option value="order">목록 순서</option>
+      </select>
+      <button class="small" id="sortBtn">이름순 정렬</button>
+    </div>
+    <ul id="list"><li class="empty" style="display:block;border:0;cursor:default">아직 추가된 영상이 없습니다</li></ul>
+    <div class="actions">
+      <button class="primary" id="renderAll" disabled>전체 편집 시작</button>
+      <button id="renderSel" disabled>선택만</button>
+      <button id="clearDone">완료 항목 지우기</button>
+    </div>
+  </section>
+</main>
+<input type="file" id="importInput" accept=".json,application/json" hidden>
+<div id="toast"></div>
+
+<script>
+// ───────────────────────── 템플릿 정의 ─────────────────────────
+// 기본값은 "v1.mp4 → 1.mp4" 편집본을 픽셀 단위로 측정한 값
+const DEFAULT_TEMPLATE = {
+  name: '스타리 기본 (1/10)',
+  width: 1080, height: 1350, bgColor: '#000000',
+  showBar: true, barHeight: 118, barColor: '#fcfece',
+  showLabel: true, labelPattern: '{n} / {total}', total: 10,
+  labelX: 34, labelY: 35, labelH: 51, labelMinW: 162, labelPadX: 36,
+  labelBg: '#000000', labelColor: '#ffffff', fontSize: 36, fontWeight: 700,
+  fontFamily: 'Pretendard', align: 'left',
+  videoArea: 'below', fit: 'coverCanvas', zoom: 1, offsetX: 0, offsetY: 0,
+  fps: 'source', crf: 18, preset: 'medium', outPattern: '{name}_edit',
+};
+
+const FIELDS = [
+  ['캔버스', [
+    ['width', '가로(px)', 'number'], ['height', '세로(px)', 'number'],
+    ['bgColor', '여백 색', 'color'],
+  ]],
+  ['상단 바', [
+    ['showBar', '표시', 'check'], ['barHeight', '높이(px)', 'number'], ['barColor', '색상', 'color'],
+  ]],
+  ['번호 라벨', [
+    ['showLabel', '표시', 'check'],
+    ['labelPattern', '문구', 'text', '{n}=번호, {total}=전체, {name}=파일명'],
+    ['total', '전체 수 {total}', 'number'],
+    ['align', '정렬', 'select', [['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']]],
+    ['labelX', '가로 여백(px)', 'number'], ['labelY', '위쪽 위치(px)', 'number'],
+    ['labelH', '박스 높이', 'number'], ['labelMinW', '박스 최소폭', 'number'], ['labelPadX', '좌우 패딩', 'number'],
+    ['labelBg', '박스 색', 'color'], ['labelColor', '글자 색', 'color'],
+    ['fontSize', '글자 크기', 'number'],
+    ['fontWeight', '굵기', 'select', [['400', '보통'], ['600', '세미볼드'], ['700', '볼드'], ['800', '엑스트라볼드'], ['900', '블랙']]],
+    ['fontFamily', '글꼴', 'select', [['Pretendard', 'Pretendard'], ['Malgun Gothic', '맑은 고딕'], ['Arial', 'Arial'], ['Georgia', 'Georgia']]],
+  ]],
+  ['영상 배치', [
+    ['videoArea', '기준 영역', 'select', [['below', '바 아래 영역'], ['full', '캔버스 전체']]],
+    ['fit', '맞춤', 'select', [['coverCanvas', '캔버스 크기로 꽉 채우기 (기본)'], ['cover', '기준 영역에 꽉 채우기'], ['contain', '전체 보이기 (여백)']]],
+    ['zoom', '확대 배율', 'number', null, 0.05], ['offsetX', '가로 이동', 'number'], ['offsetY', '세로 이동', 'number'],
+  ]],
+  ['출력', [
+    ['fps', '프레임', 'select', [['source', '원본 유지'], ['24', '24'], ['25', '25'], ['30', '30'], ['60', '60']]],
+    ['crf', '화질 (CRF)', 'number', '낮을수록 고화질 (16~23 권장)'],
+    ['preset', '인코딩 속도', 'select', [['veryfast', '빠름'], ['medium', '보통'], ['slow', '느림(고효율)']]],
+    ['outPattern', '파일 이름', 'text', '{name}=원본 이름, {n}=번호'],
+  ]],
+];
+
+const LS_KEY = 'tplEditor.templates.v2', LS_CUR = 'tplEditor.current.v1';
+let templates = loadTemplates();
+let curName = localStorage.getItem(LS_CUR) || DEFAULT_TEMPLATE.name;
+if (!templates[curName]) curName = Object.keys(templates)[0];
+let T = { ...DEFAULT_TEMPLATE, ...templates[curName] };
+
+function loadTemplates() {
+  try { const t = JSON.parse(localStorage.getItem(LS_KEY)); if (t && Object.keys(t).length) return t; } catch {}
+  return { [DEFAULT_TEMPLATE.name]: { ...DEFAULT_TEMPLATE } };
+}
+function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(templates)); localStorage.setItem(LS_CUR, curName); } catch {} }
+
+// ───────────────────────── 폼 생성 ─────────────────────────
+const form = document.getElementById('form');
+function buildForm() {
+  form.innerHTML = '';
+  for (const [group, fields] of FIELDS) {
+    const fs = document.createElement('fieldset');
+    fs.innerHTML = `<legend>${group}</legend>`;
+    for (const [key, label, type, extra, step] of fields) {
+      const row = document.createElement('div'); row.className = 'row';
+      const id = 'f_' + key;
+      let input;
+      if (type === 'select') {
+        input = `<select id="${id}">${extra.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
+      } else if (type === 'check') {
+        input = `<input type="checkbox" id="${id}" style="justify-self:start">`;
+      } else {
+        input = `<input type="${type}" id="${id}" ${step ? `step="${step}"` : ''}>`;
+      }
+      row.innerHTML = `<label for="${id}">${label}</label>${input}`;
+      fs.appendChild(row);
+      if (typeof extra === 'string') { const h = document.createElement('p'); h.className = 'hint'; h.textContent = extra; h.style.margin = '-2px 0 6px 104px'; fs.appendChild(h); }
+      const el = row.querySelector('#' + id);
+      el.addEventListener('input', () => {
+        T[key] = type === 'check' ? el.checked : type === 'number' ? (parseFloat(el.value) || 0) : el.value;
+        dirty = true; draw(); refreshList();
+      });
+    }
+    form.appendChild(fs);
+  }
+  fillForm();
+}
+function fillForm() {
+  for (const [, fields] of FIELDS) for (const [key, , type] of fields) {
+    const el = document.getElementById('f_' + key);
+    if (type === 'check') el.checked = !!T[key]; else el.value = T[key];
+  }
+}
+let dirty = false;
+
+const tplSelect = document.getElementById('tplSelect');
+function fillTplSelect() {
+  tplSelect.innerHTML = Object.keys(templates).map(n => `<option>${escapeHtml(n)}</option>`).join('');
+  tplSelect.value = curName;
+}
+tplSelect.onchange = () => {
+  if (dirty && !confirm('저장하지 않은 변경사항이 있습니다. 바꿀까요?')) { tplSelect.value = curName; return; }
+  curName = tplSelect.value; T = { ...DEFAULT_TEMPLATE, ...templates[curName] }; dirty = false;
+  persist(); fillForm(); draw(); refreshList();
+};
+document.getElementById('tplSave').onclick = () => { templates[curName] = { ...T, name: curName }; dirty = false; persist(); toast('템플릿 저장됨'); };
+document.getElementById('tplSaveAs').onclick = () => {
+  const n = prompt('새 템플릿 이름', curName + ' 복사'); if (!n) return;
+  curName = n; templates[n] = { ...T, name: n }; dirty = false; persist(); fillTplSelect(); toast('저장됨: ' + n);
+};
+document.getElementById('tplDelete').onclick = () => {
+  if (Object.keys(templates).length <= 1) return toast('마지막 템플릿은 지울 수 없어요');
+  if (!confirm(`"${curName}" 템플릿을 삭제할까요?`)) return;
+  delete templates[curName]; curName = Object.keys(templates)[0]; T = { ...DEFAULT_TEMPLATE, ...templates[curName] };
+  persist(); fillTplSelect(); fillForm(); draw(); refreshList();
+};
+document.getElementById('tplReset').onclick = () => {
+  if (!confirm('현재 템플릿 값을 기본값(스타리 1/10)으로 되돌릴까요?')) return;
+  T = { ...DEFAULT_TEMPLATE, name: curName }; dirty = true; fillForm(); draw(); refreshList();
+};
+document.getElementById('tplExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({ ...T, name: curName }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = curName + '.template.json'; a.click();
+};
+document.getElementById('tplImport').onclick = () => document.getElementById('importInput').click();
+document.getElementById('importInput').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text()); const n = j.name || f.name.replace(/\..*$/, '');
+    templates[n] = { ...DEFAULT_TEMPLATE, ...j, name: n }; curName = n; T = { ...templates[n] };
+    persist(); fillTplSelect(); fillForm(); draw(); refreshList(); toast('가져옴: ' + n);
+  } catch { toast('템플릿 파일을 읽을 수 없어요'); }
+  e.target.value = '';
+};
+
+// ───────────────────────── 오버레이 그리기 (미리보기 = 렌더 동일) ─────────────────────────
+function labelText(item) {
+  return String(T.labelPattern)
+    .replaceAll('{n}', item ? item.n : 1)
+    .replaceAll('{total}', T.total)
+    .replaceAll('{name}', item ? baseName(item.name) : 'video');
+}
+function drawOverlay(ctx, item) {
+  const W = T.width;
+  if (T.showBar && T.barHeight > 0) { ctx.fillStyle = T.barColor; ctx.fillRect(0, 0, W, T.barHeight); }
+  if (T.showLabel && T.labelPattern) {
+    const text = labelText(item);
+    ctx.font = `${T.fontWeight} ${T.fontSize}px "${T.fontFamily}", Pretendard, "Malgun Gothic", sans-serif`;
+    const tw = ctx.measureText(text).width;
+    const bw = Math.max(T.labelMinW, Math.ceil(tw + T.labelPadX * 2));
+    const bx = T.align === 'center' ? (W - bw) / 2 : T.align === 'right' ? W - T.labelX - bw : T.labelX;
+    ctx.fillStyle = T.labelBg; ctx.fillRect(bx, T.labelY, bw, T.labelH);
+    ctx.fillStyle = T.labelColor; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    // 숫자 높이 기준으로 박스 세로 중앙 정렬
+    const m = ctx.measureText('0');
+    ctx.fillText(text, bx + bw / 2, T.labelY + T.labelH / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2);
+  }
+}
+function overlayDataURL(item) {
+  const c = document.createElement('canvas'); c.width = T.width; c.height = T.height;
+  drawOverlay(c.getContext('2d'), item); return c.toDataURL('image/png');
+}
+// 영상 배치 계산 (server.js 와 동일한 공식)
+function placement(vw, vh, item) {
+  const W = T.width, H = T.height;
+  const area = T.videoArea === 'below' && T.showBar ? { y: T.barHeight, h: H - T.barHeight } : { y: 0, h: H };
+  const base = T.fit === 'contain' ? Math.min(W / vw, area.h / vh)
+    : T.fit === 'coverCanvas' ? Math.max(W / vw, H / vh) : Math.max(W / vw, area.h / vh);
+  const s = base * (T.zoom || 1) * (item ? item.zoom : 1);
+  const sw = vw * s, sh = vh * s;
+  return {
+    x: (W - sw) / 2 + (T.offsetX || 0) + (item ? item.offsetX : 0),
+    y: area.y + (area.h - sh) / 2 + (T.offsetY || 0) + (item ? item.offsetY : 0), w: sw, h: sh,
+  };
+}
+
+// ───────────────────────── 미리보기 ─────────────────────────
+const stage = document.getElementById('stage'), sctx = stage.getContext('2d');
+const video = document.createElement('video'); video.muted = false; video.playsInline = true; video.loop = true;
+let selected = null;
+function draw() {
+  if (stage.width !== T.width || stage.height !== T.height) { stage.width = T.width; stage.height = T.height; }
+  sctx.fillStyle = T.bgColor; sctx.fillRect(0, 0, T.width, T.height);
+  if (selected && video.readyState >= 2) {
+    const p = placement(video.videoWidth, video.videoHeight, selected);
+    sctx.drawImage(video, p.x, p.y, p.w, p.h);
+  } else {
+    sctx.fillStyle = '#3a3a36'; sctx.font = '600 40px Pretendard, sans-serif'; sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+    sctx.fillText('영상을 추가하면 여기에 미리보기', T.width / 2, T.height / 2 + T.barHeight / 2);
+  }
+  drawOverlay(sctx, selected);
+}
+function loop() {
+  draw();
+  if (video.duration) {
+    seek.value = (video.currentTime / video.duration) * 1000;
+    timeEl.textContent = `${video.currentTime.toFixed(1)} / ${video.duration.toFixed(1)}`;
+  }
+  if (!video.paused) requestAnimationFrame(loop);
+}
+const seek = document.getElementById('seek'), timeEl = document.getElementById('time'), playBtn = document.getElementById('play');
+playBtn.onclick = () => { if (!selected) return; video.paused ? video.play() : video.pause(); };
+video.onplay = () => { playBtn.textContent = '❚❚'; loop(); };
+video.onpause = () => { playBtn.textContent = '▶'; loop(); };
+video.onseeked = video.onloadeddata = () => loop();
+seek.oninput = () => { if (video.duration) video.currentTime = (seek.value / 1000) * video.duration; };
+
+// 드래그로 개별 위치 조정, 휠로 개별 확대
+let drag = null;
+stage.addEventListener('pointerdown', e => { if (!selected) return; stage.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, ox: selected.offsetX, oy: selected.offsetY }; });
+stage.addEventListener('pointermove', e => {
+  if (!drag) return; const k = T.width / stage.getBoundingClientRect().width;
+  selected.offsetX = Math.round(drag.ox + (e.clientX - drag.x) * k);
+  selected.offsetY = Math.round(drag.oy + (e.clientY - drag.y) * k);
+  draw(); renderItemMeta(selected);
+});
+stage.addEventListener('pointerup', () => drag = null);
+stage.addEventListener('wheel', e => {
+  if (!selected) return; e.preventDefault();
+  selected.zoom = Math.max(0.2, Math.min(5, +(selected.zoom * (e.deltaY < 0 ? 1.03 : 1 / 1.03)).toFixed(3)));
+  draw(); renderItemMeta(selected);
+}, { passive: false });
+document.getElementById('resetItem').onclick = () => { if (!selected) return; Object.assign(selected, { offsetX: 0, offsetY: 0, zoom: 1 }); draw(); renderItemMeta(selected); };
+document.getElementById('applyAll').onclick = () => {
+  if (!selected) return;
+  for (const it of items) Object.assign(it, { offsetX: selected.offsetX, offsetY: selected.offsetY, zoom: selected.zoom });
+  refreshList(); toast('모든 영상에 같은 위치 적용');
+};
+
+// ───────────────────────── 영상 목록 ─────────────────────────
+const items = []; // {key,name,file,id,meta,n,manualN,offsetX,offsetY,zoom,status,progress,out,thumb}
+const list = document.getElementById('list');
+const fileInput = document.getElementById('fileInput'), drop = document.getElementById('drop');
+drop.onclick = () => fileInput.click();
+fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); };
+document.body.ondragover = e => e.preventDefault();
+document.body.ondrop = e => { e.preventDefault(); addFiles(e.dataTransfer.files); };
+
+const numModeEl = document.getElementById('numMode');
+numModeEl.onchange = () => { renumber(); refreshList(); draw(); };
+document.getElementById('sortBtn').onclick = () => { items.sort((a, b) => natCmp(a.name, b.name)); renumber(); refreshList(); };
+
+function natCmp(a, b) { return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
+function baseName(n) { return n.replace(/\.[^.]+$/, ''); }
+function numFromName(n) { const m = baseName(n).match(/(\d+)(?!.*\d)/); return m ? parseInt(m[1], 10) : null; }
+function renumber() {
+  items.forEach((it, i) => {
+    if (it.manualN != null) { it.n = it.manualN; return; }
+    const fromFile = numFromName(it.name);
+    it.n = numModeEl.value === 'file' && fromFile != null ? fromFile : i + 1;
+  });
+}
+
+async function addFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(f.name));
+  if (!files.length) return toast('영상 파일만 추가할 수 있어요');
+  files.sort((a, b) => natCmp(a.name, b.name));
+  for (const f of files) {
+    const it = { key: Math.random().toString(36).slice(2), name: f.name, file: f, id: null, meta: null, n: 0, manualN: null,
+      offsetX: 0, offsetY: 0, zoom: 1, status: 'uploading', progress: 0, out: null, thumb: null };
+    items.push(it); renumber(); refreshList();
+    if (!selected) select(it);
+    makeThumb(it);
+    upload(it);
+  }
+}
+async function upload(it) {
+  try {
+    const r = await fetch('/api/upload?name=' + encodeURIComponent(it.name), { method: 'POST', body: it.file });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error);
+    it.id = j.id; it.meta = j.meta; it.status = 'ready';
+  } catch (e) { it.status = 'error'; it.error = '업로드 실패: ' + e.message; }
+  renderItemMeta(it); updateButtons();
+}
+function makeThumb(it) {
+  const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = URL.createObjectURL(it.file);
+  v.onloadeddata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 2); };
+  v.onseeked = () => {
+    const c = document.createElement('canvas'); c.width = 108; c.height = 108; const x = c.getContext('2d');
+    const s = Math.max(108 / v.videoWidth, 108 / v.videoHeight);
+    x.drawImage(v, (108 - v.videoWidth * s) / 2, (108 - v.videoHeight * s) / 2, v.videoWidth * s, v.videoHeight * s);
+    it.thumb = c.toDataURL('image/jpeg', .7); URL.revokeObjectURL(v.src);
+    const img = list.querySelector(`[data-key="${it.key}"] .thumb`); if (img) img.src = it.thumb;
+  };
+}
+function select(it) {
+  selected = it;
+  if (video.src) URL.revokeObjectURL(video.src);
+  video.src = URL.createObjectURL(it.file);
+  video.load();
+  list.querySelectorAll('li').forEach(li => li.classList.toggle('sel', li.dataset.key === it.key));
+  draw();
+}
+
+function statusHtml(it) {
+  switch (it.status) {
+    case 'uploading': return '<span class="st">불러오는 중…</span>';
+    case 'ready': return '<span class="st">대기</span>';
+    case 'rendering': return `<span class="st">${Math.round(it.progress * 100)}%</span><div class="bar"><i style="width:${it.progress * 100}%"></i></div>`;
+    case 'done': return `<span class="st done">완료</span><div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end">
+        <a class="btn small" style="padding:2px 6px;font-size:11px" href="/api/out/${encodeURIComponent(it.out)}" target="_blank" onclick="event.stopPropagation()">보기</a>
+        <a class="btn small" style="padding:2px 6px;font-size:11px" href="/api/out/${encodeURIComponent(it.out)}?dl=1" onclick="event.stopPropagation()">저장</a></div>`;
+    case 'error': return `<span class="st err" title="${escapeHtml(it.error || '')}">실패 ⓘ</span>`;
+  }
+  return '';
+}
+function refreshList() {
+  document.getElementById('count').textContent = items.length ? `${items.length}개` : '';
+  if (!items.length) { list.innerHTML = '<li class="empty" style="display:block;border:0;cursor:default">아직 추가된 영상이 없습니다</li>'; updateButtons(); return; }
+  list.innerHTML = '';
+  for (const it of items) {
+    const li = document.createElement('li'); li.dataset.key = it.key;
+    if (selected === it) li.classList.add('sel');
+    li.innerHTML = `<img class="thumb" alt="" ${it.thumb ? `src="${it.thumb}"` : ''}>
+      <div style="min-width:0">
+        <div class="name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</div>
+        <div class="meta"></div>
+      </div>
+      <div class="stw"></div>`;
+    li.onclick = () => select(it);
+    list.appendChild(li);
+    renderItemMeta(it);
+  }
+  updateButtons();
+}
+function renderItemMeta(it) {
+  const li = list.querySelector(`[data-key="${it.key}"]`); if (!li) return;
+  const m = it.meta;
+  const moved = it.offsetX || it.offsetY || it.zoom !== 1;
+  li.querySelector('.meta').innerHTML = `
+    <span>번호</span><input type="number" value="${it.n}" min="0">
+    <span>${m ? `${m.width}×${m.height} · ${m.duration.toFixed(1)}s` : ''}</span>
+    ${moved ? '<span title="이 영상만 위치/확대가 조정됨">✎ 개별조정</span>' : ''}
+    <button class="small" data-act="del" title="목록에서 제거" style="padding:0 6px">✕</button>`;
+  const inp = li.querySelector('.meta input');
+  inp.onclick = e => e.stopPropagation();
+  inp.oninput = () => { it.manualN = parseInt(inp.value, 10) || 0; it.n = it.manualN; if (selected === it) draw(); };
+  li.querySelector('[data-act=del]').onclick = e => {
+    e.stopPropagation(); const i = items.indexOf(it); items.splice(i, 1);
+    if (selected === it) { selected = null; video.removeAttribute('src'); video.load(); if (items[0]) select(items[0]); }
+    renumber(); refreshList(); draw();
+  };
+  li.querySelector('.stw').innerHTML = statusHtml(it);
+}
+function updateButtons() {
+  const anyReady = items.some(i => i.id && i.status !== 'rendering');
+  document.getElementById('renderAll').disabled = !anyReady || rendering;
+  document.getElementById('renderSel').disabled = !(selected && selected.id) || rendering;
+}
+
+// ───────────────────────── 렌더링 ─────────────────────────
+let rendering = false;
+document.getElementById('renderAll').onclick = () => runQueue(items.filter(i => i.id && i.status !== 'uploading'));
+document.getElementById('renderSel').onclick = () => selected && runQueue([selected]);
+document.getElementById('clearDone').onclick = () => {
+  for (let i = items.length - 1; i >= 0; i--) if (items[i].status === 'done') { if (selected === items[i]) selected = null; items.splice(i, 1); }
+  if (!selected && items[0]) select(items[0]); refreshList(); draw();
+};
+document.getElementById('openOut').onclick = () => fetch('/api/open-output', { method: 'POST' });
+
+async function runQueue(queue) {
+  if (!queue.length) return;
+  rendering = true; updateButtons();
+  try { await document.fonts.load(`${T.fontWeight} ${T.fontSize}px "${T.fontFamily}"`); } catch {}
+  let ok = 0;
+  for (const it of queue) {
+    it.status = 'rendering'; it.progress = 0; renderItemMeta(it);
+    try {
+      const outName = String(T.outPattern || '{name}_edit').replaceAll('{name}', baseName(it.name)).replaceAll('{n}', it.n);
+      const r = await fetch('/api/render', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: it.id, template: T, overlay: overlayDataURL(it), place: placement(it.meta.width, it.meta.height, it), outName }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      while (true) {
+        await new Promise(res => setTimeout(res, 500));
+        const s = await (await fetch('/api/job/' + j.jobId)).json();
+        it.progress = s.progress; renderItemMeta(it);
+        if (s.status === 'done') { it.status = 'done'; it.out = s.out; ok++; break; }
+        if (s.status === 'error') throw new Error(s.error);
+      }
+    } catch (e) { it.status = 'error'; it.error = e.message; console.error(e); }
+    renderItemMeta(it);
+  }
+  rendering = false; updateButtons();
+  toast(`${ok}/${queue.length}개 완료 · output 폴더에 저장됨`);
+}
+
+// ───────────────────────── 유틸 ─────────────────────────
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+let toastT; function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+addEventListener('beforeunload', e => { if (rendering) { e.preventDefault(); e.returnValue = ''; } });
+
+buildForm(); fillTplSelect();
+document.fonts.ready.then(draw);
+document.fonts.load('700 36px Pretendard').then(draw).catch(() => {});
+draw();
+</script>
+</body>
+</html>

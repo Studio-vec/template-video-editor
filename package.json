@@ -1,0 +1,12 @@
+{
+  "name": "template-video-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "영상을 템플릿(상단 바 + 번호 라벨 + 4:5 크롭)으로 일괄 편집",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "ffmpeg-static": "5.2.0",
+    "ffprobe-static": "3.1.0"
+  }
+}
