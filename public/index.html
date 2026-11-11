@@ -25,8 +25,25 @@
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .card h2 { font-size: 13px; margin: 0 0 10px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
   .card h2 .sp { flex: 1; }
-  fieldset { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; }
-  legend { font-size: 12px; font-weight: 700; color: var(--sub); padding: 0 4px 0 0; }
+  .grp { border-top: 1px solid var(--line); margin-top: 8px; }
+  .grp > summary { list-style: none; cursor: pointer; padding: 9px 2px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; user-select: none; }
+  .grp > summary::-webkit-details-marker { display: none; }
+  .grp > summary::before { content: '▸'; color: var(--sub); font-size: 11px; width: 10px; transition: transform .15s; }
+  .grp[open] > summary::before { transform: rotate(90deg); }
+  .grp > summary .sum { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+  .grp > div { padding: 0 0 8px; }
+  .quick { margin-top: 10px; }
+  .more { position: relative; }
+  .more > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: 12px; background: var(--panel); }
+  .more > summary::-webkit-details-marker { display: none; }
+  .more[open] > div { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
+  .more[open] > div button { border: 0; text-align: left; border-radius: 6px; }
+  .more[open] > div button:hover { background: var(--bg); }
+  body.noPanel main { grid-template-columns: minmax(320px, 1fr) 380px; }
+  body.noPanel #tplPanel { display: none; }
+  #showPanel { display: none; }
+  body.noPanel #showPanel { display: inline-block; }
+  .controls .sep { width: 1px; height: 20px; background: var(--line); }
   .row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
   .row label { font-size: 12px; color: var(--sub); }
   .row.two { grid-template-columns: 96px 1fr 1fr; }
@@ -65,22 +82,26 @@
   <h1>템플릿 영상 편집기</h1>
   <span class="hint" style="margin:0">원본 영상을 넣으면 템플릿 그대로 일괄 편집합니다</span>
   <span class="sp"></span>
+  <button id="showPanel">⚙ 템플릿 설정</button>
   <button id="openOut">📁 결과물 폴더</button>
 </header>
 
 <main>
   <!-- 템플릿 설정 -->
   <section class="card" id="tplPanel">
-    <h2>템플릿 <span class="sp"></span>
-      <select id="tplSelect" style="width:auto"></select>
+    <h2>템플릿 설정 <span class="sp"></span>
+      <button class="small" id="hidePanel" title="설정 패널 닫기">닫기 ✕</button>
     </h2>
-    <div class="actions" style="margin-top:0">
+    <div style="display:flex;gap:6px;align-items:center">
+      <select id="tplSelect" style="flex:1"></select>
       <button class="small" id="tplSave">저장</button>
-      <button class="small" id="tplSaveAs">다른 이름으로</button>
-      <button class="small" id="tplDelete">삭제</button>
-      <button class="small" id="tplExport">내보내기</button>
-      <button class="small" id="tplImport">가져오기</button>
-      <button class="small" id="tplReset">기본값</button>
+      <details class="more"><summary title="템플릿 관리">⋯</summary><div>
+        <button class="small" id="tplSaveAs">다른 이름으로 저장</button>
+        <button class="small" id="tplExport">파일로 내보내기</button>
+        <button class="small" id="tplImport">파일에서 가져오기</button>
+        <button class="small" id="tplReset">기본값으로 되돌리기</button>
+        <button class="small" id="tplDelete" style="color:var(--err)">삭제</button>
+      </div></details>
     </div>
     <div id="form"></div>
   </section>
@@ -91,13 +112,12 @@
     <div class="card controls" style="padding:10px">
       <button class="small" id="play">▶</button>
       <input type="range" id="seek" min="0" max="1000" value="0">
-      <span id="time" class="hint" style="margin:0;min-width:84px;text-align:right">0.0 / 0.0</span>
+      <span id="time" class="hint" style="margin:0;min-width:70px;text-align:right">0.0 / 0.0</span>
+      <span class="sep"></span>
+      <button class="small" id="resetItem" title="이 영상의 위치·확대를 원래대로">↺ 위치</button>
+      <button class="small" id="applyAll" title="지금 영상의 위치·확대를 모든 영상에 적용">전체 적용</button>
     </div>
-    <div class="card controls" style="padding:10px">
-      <span class="hint" style="margin:0;flex:1">미리보기를 <b>드래그</b>하면 위치, <b>휠</b>은 확대(이 영상만 적용)</span>
-      <button class="small" id="resetItem">위치 초기화</button>
-      <button class="small" id="applyAll">이 위치를 전체에 적용</button>
-    </div>
+    <p class="hint" style="margin:-4px 2px 0;text-align:center">미리보기 드래그 = 위치 이동 · 휠 = 확대 (선택한 영상만)</p>
   </section>
 
   <!-- 작업 목록 -->
@@ -139,7 +159,12 @@ const DEFAULT_TEMPLATE = {
   fps: 'source', crf: 18, preset: 'medium', outPattern: '{name}_edit',
 };
 
+// 첫 그룹은 항상 펼쳐진 '빠른 설정', 나머지는 접이식 (어느 설정이든 클릭 1번으로 도달)
 const FIELDS = [
+  ['빠른 설정', [
+    ['total', '전체 수', 'number'],
+    ['labelPattern', '라벨 문구', 'text', '{n} 번호 · {total} 전체 · {name} 파일명'],
+  ]],
   ['캔버스', [
     ['width', '가로(px)', 'number'], ['height', '세로(px)', 'number'],
     ['bgColor', '여백 색', 'color'],
@@ -149,8 +174,6 @@ const FIELDS = [
   ]],
   ['번호 라벨', [
     ['showLabel', '표시', 'check'],
-    ['labelPattern', '문구', 'text', '{n}=번호, {total}=전체, {name}=파일명'],
-    ['total', '전체 수 {total}', 'number'],
     ['align', '정렬', 'select', [['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']]],
     ['labelX', '가로 여백(px)', 'number'], ['labelY', '위쪽 위치(px)', 'number'],
     ['labelH', '박스 높이', 'number'], ['labelMinW', '박스 최소폭', 'number'], ['labelPadX', '좌우 패딩', 'number'],
@@ -188,9 +211,16 @@ function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(templates
 const form = document.getElementById('form');
 function buildForm() {
   form.innerHTML = '';
-  for (const [group, fields] of FIELDS) {
-    const fs = document.createElement('fieldset');
-    fs.innerHTML = `<legend>${group}</legend>`;
+  const openSet = new Set(lsGet(LS_OPEN, []));
+  FIELDS.forEach(([group, fields], gi) => {
+    let fs, wrap;
+    if (gi === 0) { wrap = fs = document.createElement('div'); wrap.className = 'quick'; }
+    else {
+      wrap = document.createElement('details'); wrap.className = 'grp'; wrap.open = openSet.has(group);
+      wrap.innerHTML = `<summary>${group}<span class="sum" data-sum="${gi}"></span></summary><div></div>`;
+      fs = wrap.querySelector('div');
+      wrap.addEventListener('toggle', () => { wrap.open ? openSet.add(group) : openSet.delete(group); lsSet(LS_OPEN, [...openSet]); });
+    }
     for (const [key, label, type, extra, step] of fields) {
       const row = document.createElement('div'); row.className = 'row';
       const id = 'f_' + key;
@@ -208,18 +238,42 @@ function buildForm() {
       const el = row.querySelector('#' + id);
       el.addEventListener('input', () => {
         T[key] = type === 'check' ? el.checked : type === 'number' ? (parseFloat(el.value) || 0) : el.value;
-        dirty = true; draw(); refreshList();
+        dirty = true; draw(); refreshList(); updateSummaries();
       });
     }
-    form.appendChild(fs);
-  }
+    form.appendChild(wrap);
+  });
   fillForm();
 }
+// 접힌 그룹 제목 옆에 현재 값 요약 → 펼치지 않아도 상태 확인
+const SUMMARY = {
+  1: () => `${T.width}×${T.height}`,
+  2: () => T.showBar ? `${T.barHeight}px · ${T.barColor.toUpperCase()}` : '숨김',
+  3: () => T.showLabel ? `${T.fontSize}px · ${({ left: '왼쪽', center: '가운데', right: '오른쪽' })[T.align]}` : '숨김',
+  4: () => `×${T.zoom}${T.offsetX || T.offsetY ? ` · 이동 ${T.offsetX},${T.offsetY}` : ''}`,
+  5: () => `${T.fps === 'source' ? '원본 fps' : T.fps + 'fps'} · CRF ${T.crf}`,
+};
+function updateSummaries() {
+  for (const el of form.querySelectorAll('[data-sum]')) { const f = SUMMARY[el.dataset.sum]; el.textContent = f ? f() : ''; }
+}
+function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+// 설정 패널 전체 닫기/열기
+const LS_OPEN = 'tplEditor.openGroups', LS_PANEL = 'tplEditor.panelHidden';
+function setPanel(hidden) { document.body.classList.toggle('noPanel', hidden); lsSet(LS_PANEL, hidden); }
+document.getElementById('hidePanel').onclick = () => setPanel(true);
+document.getElementById('showPanel').onclick = () => setPanel(false);
+setPanel(lsGet(LS_PANEL, false));
+// ⋯ 메뉴: 항목 클릭 또는 바깥 클릭 시 닫힘
+const moreMenu = document.querySelector('.more');
+moreMenu.querySelector('div').addEventListener('click', () => moreMenu.open = false);
+document.addEventListener('click', e => { if (!moreMenu.contains(e.target)) moreMenu.open = false; });
 function fillForm() {
   for (const [, fields] of FIELDS) for (const [key, , type] of fields) {
     const el = document.getElementById('f_' + key);
     if (type === 'check') el.checked = !!T[key]; else el.value = T[key];
   }
+  updateSummaries();
 }
 let dirty = false;
 
